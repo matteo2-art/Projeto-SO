@@ -1,49 +1,51 @@
 #include <fcntl.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <string.h>
 #include "../include/protocol.h"
 
+void build_reply_path(char *buf, int pid) {
+    // manually build "tmp/runner_XXXX" without printf
+    strcpy(buf, FIFO_RUNNER_PREFIX);
+    int len = strlen(buf);
+    // convert pid to string manually
+    char tmp[20];
+    int i = 0;
+    int n = pid;
+    if (n == 0) { tmp[i++] = '0'; }
+    while (n > 0) { tmp[i++] = '0' + (n % 10); n /= 10; }
+    // tmp is reversed, fix it
+    for (int j = 0; j < i; j++) {
+        buf[len + j] = tmp[i - 1 - j];
+    }
+    buf[len + i] = '\0';
+}
+
 int main() {
-    // 1. create the controller's inbox FIFO
-    if (mkfifo(FIFO_CONTROLLER, 0666) == -1) {
-        perror("mkfifo controller");
-        return 1;
-    }
+    mkfifo(FIFO_CONTROLLER, 0666);
 
-    // 2. open it for reading (blocks until a runner connects)
-    int fd = open(FIFO_CONTROLLER, O_RDONLY);
-    if (fd == -1) {
-        perror("open controller");
-        unlink(FIFO_CONTROLLER);
-        return 1;
-    }
+    int fd = open(FIFO_CONTROLLER, O_RDWR);
 
-    // 3. read messages in a loop
     Message msg;
     while (read(fd, &msg, sizeof(Message)) > 0) {
 
         if (msg.type == MSG_REQUEST) {
-            // build the reply FIFO path for this runner
             char reply_fifo[64];
-            snprintf(reply_fifo, sizeof(reply_fifo), "%s%d",
-                     FIFO_RUNNER_PREFIX, msg.runner_pid);
+            build_reply_path(reply_fifo, msg.runner_pid);
 
-            // send GO_AHEAD back to that runner
             int reply_fd = open(reply_fifo, O_WRONLY);
-            if (reply_fd == -1) {
-                perror("open reply_fifo");
-                continue;
-            }
             Message reply;
             reply.type = MSG_GO_AHEAD;
-            if (write(reply_fd, &reply, sizeof(Message)) == -1)
-                perror("write reply");
+            reply.runner_pid = msg.runner_pid;
+            write(reply_fd, &reply, sizeof(Message));
             close(reply_fd);
         }
 
         if (msg.type == MSG_DONE) {
-            // command finished — log it, update state, etc.
+            // will log here later
+            // for now just print to stderr for debugging
+            char dbg[] = "[controller] a command finished\n";
+            write(2, dbg, sizeof(dbg) - 1);
         }
     }
 

@@ -1,19 +1,23 @@
-CC      = gcc
-CFLAGS  = -Wall -Wextra -I include
+CC = gcc
+CFLAGS = -Wall -g -Iinclude
+LDFLAGS =
 
-SRCS_CTRL   = src/controller.c
-SRCS_RUNNER = src/runner.c
+all: folders controller runner
 
-.PHONY: all clean
+controller: bin/controller
+runner: bin/runner
 
-all: controller runner
+folders:
+		@mkdir -p src include obj bin tmp
 
-controller: $(SRCS_CTRL) include/protocol.h
-	$(CC) $(CFLAGS) -o $@ $(SRCS_CTRL)
+bin/controller: obj/controller.o
+		$(CC) $(LDFLAGS) $^ -o $@
 
-runner: $(SRCS_RUNNER) include/protocol.h
-	$(CC) $(CFLAGS) -o $@ $(SRCS_RUNNER)
+bin/runner: obj/runner.o
+		$(CC) $(LDFLAGS) $^ -o $@
+
+obj/%.o: src/%.c
+		$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f controller runner
-	rm -f tmp/controller_in tmp/runner_*
+		rm -f obj/* tmp/* bin/*

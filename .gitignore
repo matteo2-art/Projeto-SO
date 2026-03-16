@@ -1,7 +1,0 @@
-# Build artifacts
-controller
-runner
-
-# FIFO files created at runtime
-tmp/controller_in
-tmp/runner_*
