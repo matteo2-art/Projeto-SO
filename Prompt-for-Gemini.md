@@ -1,19 +1,18 @@
-Hey Claude, I am going to take a pause on this project and hand it off to my group members. They are going to open a brand new Claude session to continue the work, and they need to bring the new AI completely up to speed.
+Hello Gemini! I am a 2nd-year Software Engineering student. My group member has been working with you on our Operating Systems project, and I am taking over the next phase. I have attached the project specification PDF.
 
-Since you have the entire history of our conversation, the exact code structure we decided on, and all the project constraints we've discussed, I want you to write the handoff prompt for them.
+We are using you as our theoretical Teaching Assistant to help us understand OS concepts, architecture, and step-by-step planning. We do not want you to just give us the final code; we want you to explain why and how things work.
 
-Please write a massive, comprehensive prompt that my colleagues can copy and paste directly into their new Claude session. The prompt you generate must include:
+Here is the 'Point of Situation' of what my colleague and you have already decided and built:
 
-    The Role: Tell the new Claude that it is a strict, low-level C coding assistant.
+    No IPC yet: We have not learned named pipes (FIFOs) in class yet. We are building everything in isolation first. We will add the communication layer at the very end.
 
-    The Constraints: Explicitly list the project rules we've been following (e.g., strictly POSIX low-level calls like fork/execvp, absolutely no system() or bash, using write() instead of printf for standard output, and preparing for the Advanced Phase redirections).
+    Execution Engine (runner.c): We built the execution logic using strictly low-level POSIX calls (fork(), execvp(), waitpid()). We are NOT using system() or bash, and we are using write() instead of printf() for standard output, exactly as the spec demands. We chose to parse the command string manually using strtok (rather than just passing argv directly) to future-proof the code for the Advanced Phase where we have to handle redirections like > and |.
 
-    The 'No IPC' Rule: Make it crystal clear that we have not learned Named Pipes (FIFOs) yet, so the new Claude must NOT generate any pipe code. It should only use /* TODO (IPC) */ comments for those parts.
+    Scheduler (scheduler.h / scheduler.c): We built a fully isolated job scheduler. It supports two policies: First-Come, First-Served (FCFS) and a Fair-Share Round Robin (RR).
 
-    The Current Status: Summarize exactly how we built runner.c and scheduler.h/c (mentioning that we avoided function pointers for the scheduler to keep it readable).
+    Important Scheduler Details: Because we are scheduling whole commands, our Round Robin does NOT use CPU time-slicing. Instead, it groups jobs by User ID into a circular linked list of queues, and takes turns pulling one full job per user. Also, to keep the C code readable for our skill level, we avoided using function pointers; the Scheduler struct just uses an enum flag to switch between FCFS and RR data compartments.
 
-    The Immediate Next Step: Give the new Claude its first task: generating the skeleton for controller.c (parsing <parallel-commands> and <sched-policy>, initializing the scheduler, and setting up the main loop).
+Next Steps:
+Our next goal is to build the skeleton for controller.c (parsing its arguments like <parallel-commands> and setting up its main loop), still without using pipes.
 
-    Code Placeholders: Leave a clear instruction at the very bottom of the prompt telling my colleagues exactly where to paste runner.c, scheduler.h, and scheduler.c.
-
-Write this from the perspective of a developer handing over a project, so the new Claude knows exactly what to do.
+I will paste our current codebase below. Please review it, confirm you understand our architecture and constraints, and then help me plan the controller.c skeleton. How should we structure the Controller's main loop to handle the <parallel-commands> limit?
