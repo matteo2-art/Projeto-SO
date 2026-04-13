@@ -11,3 +11,6 @@ job=3 user=1 cmd=sleep 20 duration=20.003258s
 job=4 user=1 cmd=sleep 20 duration=20.003446s
 job=5 user=1 cmd=sleep 20 duration=20.002637s
 job=6 user=1 cmd=sleep 20 duration=20.002402s
+job=1 user=1 cmd=sleep 20 duration=20.002874s
+job=2 user=1 cmd=sleep 20 duration=20.003054s
+job=3 user=1 cmd=sleep 20 duration=20.003285s

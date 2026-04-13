@@ -25,7 +25,6 @@ void handle_done(Message *msg, Scheduler *s, RunningSlot *slots, int parallel,
 
     gettimeofday(&end_time, NULL);
 
-    /* encontrar qual slot terminou pelo runner_pid */
     idx = -1;
     for (i = 0; i < parallel; i++) {
         if (slots[i].active && slots[i].runner_pid == msg->runner_pid) {
@@ -37,7 +36,6 @@ void handle_done(Message *msg, Scheduler *s, RunningSlot *slots, int parallel,
     if (idx >= 0) {
         log_job(fd_log, &slots[idx], &end_time);
         slots[idx].active = 0;
-        /* despachar próximo job para o slot que acabou de libertar */
         if (!scheduler_is_empty(s))
             dispatch_next(s, &slots[idx]);
     }
