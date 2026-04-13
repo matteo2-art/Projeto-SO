@@ -1,24 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/fcfs.h"
+#include <string.h> 
+#include <unistd.h>
+#include "common/fcfs.h"
 
 /* ── POLÍTICA FCFS (fila de espera) ──────────────────────────────────────── */
 
-void fcfs_add_job(Scheduler *s, int job_id, int user_id, const char *command) {
-    Job *job = make_job(job_id, user_id, command);
-    if (job == NULL) { perror("job"); return; } 
+void fcfs_add_job(Scheduler *s, int job_id, int user_id, pid_t runner_pid, const char *command) {
+    Job *job = make_job(job_id, user_id, runner_pid, command);
+    if (job == NULL) { perror("job"); return; }
 
-    // Se a fila estiver completamente vazia, esta tarefa torna-se na primeira (head) e na última (tail)
     if (s->fcfs.head == NULL) {
         s->fcfs.head = job;
         s->fcfs.tail = job;
     } else {
-        // Caso contrário, colamo-la atrás da pessoa que estava em último, e atualizamos o ponteiro da tail
         s->fcfs.tail->next = job;
         s->fcfs.tail       = job;
     }
-
-    s->size++; // Incrementar o contador global de tarefas
+    s->size++;
 }
 
 Job *fcfs_next_job(Scheduler *s) {
@@ -38,12 +37,13 @@ Job *fcfs_next_job(Scheduler *s) {
     return job;
 }
 
-void fcfs_list(Scheduler *s) {
-    if (s->fcfs.head == NULL) { printf("sem tarefas pendentes\n"); return; }
-
+void fcfs_list(Scheduler *s, char *buf, int buf_size) {
     Job *job = s->fcfs.head;
     while (job != NULL) {
-        printf("utilizador %d - tarefa %d - %s\n", job->user_id, job->job_id, job->command);
+        char line[MAX_CMD + 64];
+        snprintf(line, sizeof(line),
+        "user-id %d - command-id %d\n", job->user_id, job->job_id);
+        strncat(buf, line, buf_size - strlen(buf) - 1);
         job = job->next;
     }
 }

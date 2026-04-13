@@ -3,7 +3,43 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/wait.h>
-#include "../include/parser.h"
+#include "runner/parser.h"
+
+/* ── FUNÇÕES AUXILIARES (HELPERS) ──────────────────────────────────────── */
+
+/* * Esta função volta a colar o array argv numa única string.
+ * Exemplo: argv[3]="echo", argv[4]="hello"  --> buf="echo hello"
+ */
+int join_args(char *buf, int buf_size, char *argv[], int start, int argc) {
+    buf[0] = '\0'; // Começar com uma string vazia
+    int offset = 0; // Controla onde estamos a escrever atualmente no buffer
+
+    // Percorrer os argumentos começando pelo nome do comando
+    for (int i = start; i < argc; i++) {
+        int token_len = strlen(argv[i]);
+
+        // Verificação de segurança
+        // +2 serve para o espaço que adicionamos, e para o terminador \0 no final
+        if (offset + token_len + 2 > buf_size) {
+            write(2, "erro: comando demasiado longo\n", 30); 
+            return -1;
+        }
+
+        // Copiar a palavra para o buffer exatamente onde ficámos
+        strncpy(buf + offset, argv[i], buf_size - offset - 1);
+        offset += token_len;
+
+        // Se esta não for a última palavra, adicionar um espaço a seguir
+        if (i < argc - 1) {
+            buf[offset++] = ' ';
+        }
+    }
+
+    // Selar a string final com um terminador nulo
+    buf[offset] = '\0';
+    return 0;
+}
+
 
 /* ── MOTOR DE EXECUÇÃO (O cérebro do processo filho) ──────────────────────────────────────── */
 
@@ -59,37 +95,3 @@ void execute_command(const char *command) {
     }
 }
 
-/* ── FUNÇÕES AUXILIARES (HELPERS) ──────────────────────────────────────── */
-
-/* * Esta função volta a colar o array argv numa única string.
- * Exemplo: argv[3]="echo", argv[4]="hello"  --> buf="echo hello"
- */
-int join_args(char *buf, int buf_size, char *argv[], int start, int argc) {
-    buf[0] = '\0'; // Começar com uma string vazia
-    int offset = 0; // Controla onde estamos a escrever atualmente no buffer
-
-    // Percorrer os argumentos começando pelo nome do comando
-    for (int i = start; i < argc; i++) {
-        int token_len = strlen(argv[i]);
-
-        // Verificação de segurança
-        // +2 serve para o espaço que adicionamos, e para o terminador \0 no final
-        if (offset + token_len + 2 > buf_size) {
-            write(2, "erro: comando demasiado longo\n", 30); 
-            return -1;
-        }
-
-        // Copiar a palavra para o buffer exatamente onde ficámos
-        strncpy(buf + offset, argv[i], buf_size - offset - 1);
-        offset += token_len;
-
-        // Se esta não for a última palavra, adicionar um espaço a seguir
-        if (i < argc - 1) {
-            buf[offset++] = ' ';
-        }
-    }
-
-    // Selar a string final com um terminador nulo
-    buf[offset] = '\0';
-    return 0;
-}

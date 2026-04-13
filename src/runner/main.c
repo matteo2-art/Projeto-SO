@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../include/parser.h"
-#include "../include/ipc.h"
+#include "runner/parser.h"
+#include "common/ipc.h"
+#include "common/protocol.h"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -75,6 +76,30 @@ int main(int argc, char *argv[]) {
         unlink_fifo(fd_private, my_fifo);
         return 0;
     }
+    /* ── OPÇÃO: -s (Shutdown) ── */
+    if (strcmp(argv[1], "-s") == 0) {
+        create_fifo(my_fifo);
 
-    return 0;
+        Message msg;
+        msg.type       = MSG_SHUTDOWN;
+        msg.runner_pid = my_pid;
+        msg.user_id    = 0;
+        msg.command[0] = '\0';
+
+        int fd_server = open_fifo_write(SERVER_FIFO);
+        if (fd_server < 0) { unlink(my_fifo); return 1; }
+        send_message(fd_server, &msg);
+        close(fd_server);
+        write(1, "[runner] sent shutdown notification\n", 36);
+
+        /* esperar que o controller confirme que desligou */
+        write(1, "[runner] waiting for controller to shutdown...\n", 47);
+        int fd_private = open_fifo_read(my_fifo);
+        Message res;
+        receive_message(fd_private, &res);
+        unlink_fifo(fd_private, my_fifo);
+
+        write(1, "[runner] controller exited.\n", 28);
+        return 0;
+    }
 }

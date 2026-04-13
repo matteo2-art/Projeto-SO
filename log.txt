@@ -1,0 +1,13 @@
+job=1 user=1 cmd=echo ola duration=0.022352s
+job=2 user=1 cmd=sleep 5 duration=5.002478s
+job=3 user=2 cmd=echo hello duration=0.002328s
+job=4 user=1 cmd=sleep 10 duration=10.003442s
+job=5 user=2 cmd=echo hello duration=0.002367s
+job=6 user=1 cmd=sleep 10 duration=10.002987s
+job=1 user=1 cmd=sleep 10 duration=10.002606s
+job=1 user=1 cmd=sleep 20 duration=20.003541s
+job=2 user=1 cmd=sleep 20 duration=20.002964s
+job=3 user=1 cmd=sleep 20 duration=20.003258s
+job=4 user=1 cmd=sleep 20 duration=20.003446s
+job=5 user=1 cmd=sleep 20 duration=20.002637s
+job=6 user=1 cmd=sleep 20 duration=20.002402s

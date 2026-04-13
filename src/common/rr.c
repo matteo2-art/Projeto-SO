@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/rr.h"
+#include <unistd.h>
+#include <string.h>
+#include "common/rr.h"
 
 /* ── POLÍTICA ROUND ROBIN (Lista circular de utilizadores, cada um com a sua fila) ──────────────────────────────────────── */
 
@@ -9,7 +11,7 @@ static UserQueue *rr_find_user(Scheduler *s, int user_id) {
     if (s->rr.head == NULL) return NULL;
 
     UserQueue *uq = s->rr.head;
-    // Para quando der a volta até voltar à head.
+    // Pára quando der a volta até voltar à head.
     while (1) {
         if (uq->user_id == user_id) return uq;
 
@@ -64,17 +66,14 @@ static void rr_remove_user(Scheduler *s, UserQueue *uq) {
     free(uq);
 }
 
-void rr_add_job(Scheduler *s, int job_id, int user_id, const char *command) {
-    Job *job = make_job(job_id, user_id, command);
+void rr_add_job(Scheduler *s, int job_id, int user_id, pid_t runner_pid, const char *command) {
+    Job *job = make_job(job_id, user_id, runner_pid, command);
     if (job == NULL) return;
 
     UserQueue *uq = rr_find_user(s, user_id);
-
-    // Se este utilizador ainda não estiver no círculo, criar uma fila para ele e inseri-lo
     if (uq == NULL) {
         uq = malloc(sizeof(UserQueue));
         if (uq == NULL) { perror("malloc"); free(job); return; }
-
         uq->user_id = user_id;
         uq->head    = NULL;
         uq->tail    = NULL;
@@ -82,7 +81,6 @@ void rr_add_job(Scheduler *s, int job_id, int user_id, const char *command) {
         rr_insert_user(s, uq);
     }
 
-    // Adicionar a tarefa à fila de espera pessoal deste utilizador específico (lógica FCFS normal)
     if (uq->head == NULL) {
         uq->head = job;
         uq->tail = job;
@@ -90,7 +88,6 @@ void rr_add_job(Scheduler *s, int job_id, int user_id, const char *command) {
         uq->tail->next = job;
         uq->tail       = job;
     }
-
     s->size++;
 }
 
@@ -116,17 +113,16 @@ Job *rr_next_job(Scheduler *s) {
     return job;
 }
 
-void rr_list(Scheduler *s) {
-    if (s->rr.head == NULL) { printf("sem tarefas pendentes\n"); return; }
-
-    // Percorrer todos os utilizadores no círculo
+void rr_list(Scheduler *s, char *buf, int buf_size) {
+    if (s->rr.head == NULL) return;
     UserQueue *uq = s->rr.head;
     do {
-        // Imprimir cada tarefa na fila pessoal deste utilizador
         Job *job = uq->head;
         while (job != NULL) {
-            printf("utilizador %d - tarefa %d - %s\n",
-                   job->user_id, job->job_id, job->command);
+            char line[MAX_CMD + 64];
+            snprintf(line, sizeof(line),
+                "user-id %d - command-id %d\n", job->user_id, job->job_id);
+            strncat(buf, line, buf_size - strlen(buf) - 1);
             job = job->next;
         }
         uq = uq->next;

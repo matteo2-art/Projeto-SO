@@ -2,7 +2,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
-#include "../include/ipc.h"
+#include "common/ipc.h"
 
 int create_fifo(const char *path) {
     if (mkfifo(path, 0666) < 0) {

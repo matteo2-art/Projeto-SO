@@ -1,6 +1,8 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#include <sys/types.h>   
+
 #define MAX_CMD 512
 
 // defines the policy
@@ -13,6 +15,7 @@ typedef enum {
 typedef struct Job {
     int job_id;
     int user_id;
+    pid_t runner_pid;
     char command[MAX_CMD]; 
     struct Job *next;
 } Job;
@@ -48,12 +51,12 @@ typedef struct {
     RRData   rr;
 } Scheduler;
 
-// public API (functions)
+Job *make_job          (int job_id, int user_id, pid_t runner_pid, const char *command);
 void scheduler_init    (Scheduler *s, SchedPolicy policy);
-void scheduler_add_job (Scheduler *s, int job_id, int user_id, const char *command);
+void scheduler_add_job (Scheduler *s, int job_id, int user_id, pid_t runner_pid, const char *command);
 Job *scheduler_next_job(Scheduler *s);
 int  scheduler_is_empty(Scheduler *s);
-void scheduler_list    (Scheduler *s);
+void scheduler_list    (Scheduler *s, char *buf, int buf_size);
 void scheduler_destroy (Scheduler *s);
 
 #endif

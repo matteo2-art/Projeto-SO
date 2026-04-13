@@ -1,7 +1,7 @@
 #ifndef IPC_H
 #define IPC_H
 
-#include "protocol.h"
+#include "common/protocol.h"
 
 // Cria um pipe (FIFO) no caminho especificado
 int create_fifo(const char *path);
