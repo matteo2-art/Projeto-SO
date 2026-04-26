@@ -14,3 +14,15 @@ job=6 user=1 cmd=sleep 20 duration=20.002402s
 job=1 user=1 cmd=sleep 20 duration=20.002874s
 job=2 user=1 cmd=sleep 20 duration=20.003054s
 job=3 user=1 cmd=sleep 20 duration=20.003285s
+job=1 user=1 cmd=echo hello duration=0.001845s
+job=1 user=1 cmd=sleep 5 duration=5.002032s
+job=2 user=2 cmd=sleep 5 duration=5.002360s
+job=3 user=1 cmd=sleep 5 duration=5.002727s
+job=4 user=2 cmd=sleep 5 duration=5.002824s
+job=1 user=1 cmd=echo hello duration=0.001900s
+job=2 user=1 cmd=echo ola mundo > out.txt duration=0.002100s
+job=3 user=1 cmd=ls | wc -l duration=0.002468s
+job=4 user=1 cmd=ls /etc | grep passwd > resultado.txt duration=0.002384s
+job=5 user=1 cmd=sort < resultado.txt duration=0.007636s
+job=6 user=1 cmd=ls /pasta/que/nao/existe 2> erros.txt duration=0.001178s
+job=7 user=1 cmd=cat /etc/passwd | grep root | wc -l duration=0.003185s
