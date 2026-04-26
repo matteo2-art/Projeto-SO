@@ -8,9 +8,9 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        write(2, "uso: runner -e <user-id> <comando>...\n"
+        write(2, "uso: runner -e <user-id> \"<comando>\"\n"
                  "     runner -c\n"
-                 "     runner -s\n", 68);
+                 "     runner -s\n", 67);
         return 1;
     }
 
@@ -21,19 +21,32 @@ int main(int argc, char *argv[]) {
     /* ── OPÇÃO: -e (executar comando) ── */
     if (strcmp(argv[1], "-e") == 0) {
         if (argc < 4) {
-            write(2, "uso: runner -e <user-id> <comando>...\n", 38);
+            write(2, "uso: runner -e <user-id> \"<comando>\"\n", 37);
             return 1;
         }
 
         int  user_id = atoi(argv[2]);
         char command[MAX_CMD];
-        if (join_args(command, MAX_CMD, argv, 3, argc) < 0) return 1;
 
-        /* gerar id único para este comando: pid * 100000 + posição */
+        /*
+         * O comando vem todo como um único argumento entre aspas — argv[3].
+         * Exemplo: ./runner -e 1 "ls | wc -l > out.txt"
+         *           argv[0]  argv[1] argv[2] argv[3]
+         *
+         * O bash interpreta as aspas e entrega o conteúdo como uma única
+         * string, por isso basta copiar argv[3] diretamente.
+         */
+        strncpy(command, argv[3], MAX_CMD - 1);
+        command[MAX_CMD - 1] = '\0';
+
+        /*
+         * Gerar um ID único para este comando.
+         * Usamos o PID do runner * 10 + um contador crescente.
+         */
         static int counter = 0;
-        int cmd_id = my_pid * 100 + (++counter);
+        int cmd_id = my_pid * 10 + (++counter);
 
-        /* 1. criar FIFO privado para receber a resposta */
+        /* 1. criar FIFO privado para receber a resposta do controller */
         if (create_fifo(my_fifo) < 0) return 1;
 
         /* 2. preencher e enviar MSG_REQUEST ao controller */
@@ -49,7 +62,7 @@ int main(int argc, char *argv[]) {
         send_message(fd_server, &msg);
         close(fd_server);
 
-        /* 3. notificar utilizador — "submitted" */
+        /* 3. notificar utilizador que o comando foi submetido */
         char buf[128];
         int  n;
         n = snprintf(buf, sizeof(buf), "[runner] command %d submitted\n", cmd_id);
@@ -78,7 +91,7 @@ int main(int argc, char *argv[]) {
         n = snprintf(buf, sizeof(buf), "[runner] command %d finished\n", cmd_id);
         write(1, buf, n);
 
-        /* 6. notificar o controller que terminou */
+        /* 6. notificar o controller que o comando terminou */
         fd_server = open_fifo_write(SERVER_FIFO);
         if (fd_server < 0) { unlink(my_fifo); return 1; }
         msg.type = MSG_DONE;
@@ -111,7 +124,7 @@ int main(int argc, char *argv[]) {
         receive_message(fd_private, &res);
         close(fd_private);
 
-        /* imprimir a resposta do controller */
+        /* imprimir a resposta do controller diretamente no stdout */
         write(1, res.command, strlen(res.command));
 
         unlink(my_fifo);
@@ -132,10 +145,15 @@ int main(int argc, char *argv[]) {
         if (fd_server < 0) { unlink(my_fifo); return 1; }
         send_message(fd_server, &msg);
         close(fd_server);
-        write(1, "[runner] sent shutdown notification\n", 36);
 
+        write(1, "[runner] sent shutdown notification\n", 36);
         write(1, "[runner] waiting for controller to shutdown...\n", 47);
 
+        /*
+         * Bloqueamos à espera da confirmação do controller.
+         * O controller só responde quando todos os runners ativos terminarem
+         * e a fila de espera estiver vazia.
+         */
         int fd_private = open_fifo_read(my_fifo);
         if (fd_private < 0) { unlink(my_fifo); return 1; }
 

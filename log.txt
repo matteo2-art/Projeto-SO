@@ -26,3 +26,13 @@ job=4 user=1 cmd=ls /etc | grep passwd > resultado.txt duration=0.002384s
 job=5 user=1 cmd=sort < resultado.txt duration=0.007636s
 job=6 user=1 cmd=ls /pasta/que/nao/existe 2> erros.txt duration=0.001178s
 job=7 user=1 cmd=cat /etc/passwd | grep root | wc -l duration=0.003185s
+job=1 user=1 cmd=echo hello duration=0.001686s
+job=2 user=1 cmd=echo ola mundo > out.txt duration=0.001777s
+job=3 user=1 cmd=ls | wc -l duration=0.002342s
+job=4 user=1 cmd=ls /etc | grep passwd > resultado.txt duration=0.003111s
+job=5 user=1 cmd=sort < resultado.txt duration=0.001740s
+job=6 user=1 cmd=ls /nao/existe 2> erros.txt duration=0.002159s
+job=7 user=1 cmd=cat /etc/passwd | grep root | wc -l duration=0.002283s
+job=8 user=1 cmd=sleep 10 duration=10.002440s
+job=9 user=1 cmd=sleep 10 duration=10.002470s
+job=1 user=1 cmd=echo hello duration=0.001950s
