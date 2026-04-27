@@ -42,26 +42,6 @@ int join_args(char *buf, int buf_size, char *argv[], int start, int argc) {
 }
 
 
-/* ── ESTRUTURAS DE DADOS ─────────────────────────────────────────────────── */
-
-/*
- * Um "segmento" representa um comando simples dentro de uma pipeline.
- * Por exemplo, em "ls -la | grep foo > out.txt", há dois segmentos:
- *   segmento 0: args=["ls", "-la"],        stdin=normal,   stdout=pipe
- *   segmento 1: args=["grep", "foo"],      stdin=pipe,     stdout="out.txt"
- */
-#define MAX_SEGMENTS 16  /* máximo de comandos ligados por pipes */
-#define MAX_ARGS     64  /* máximo de argumentos por comando     */
-
-typedef struct {
-    char *args[MAX_ARGS]; /* os argumentos do comando, ex: ["grep", "foo", NULL] */
-    int   argc;           /* quantos argumentos tem                               */
-    char *file_in;        /* ficheiro de input  (<),  ou NULL se não houver       */
-    char *file_out;       /* ficheiro de output (>),  ou NULL se não houver       */
-    char *file_err;       /* ficheiro de stderr (2>), ou NULL se não houver       */
-} Segment;
-
-
 /* ── PARSER: converte a string do comando em segmentos ──────────────────── */
 
 /*
@@ -145,39 +125,31 @@ void execute_command(const char *command) {
     if (nseg == 0 || segs[0].argc == 0) return;
 
     /*
-     * 3. Criar os pipes necessários.
-     *
-     * Para N segmentos precisamos de N-1 pipes.
-     * Cada pipe é um par de file descriptors: [fd_leitura, fd_escrita]
-     *
-     * Exemplo com 3 segmentos (A | B | C):
-     *   pipes[0] liga A → B   (A escreve em pipes[0][1], B lê de pipes[0][0])
-     *   pipes[1] liga B → C   (B escreve em pipes[1][1], C lê de pipes[1][0])
+     * 3. Array para guardar os pipes — mas agora NÃO os criamos todos aqui.
+     * Cada pipe[i] é criado imediatamente antes do fork do segmento i,
+     * e fechado no pai logo após o fork do segmento i+1.
+     * Em qualquer momento, o pai tem no máximo dois pipes abertos:
+     * o do segmento anterior (pipe[i-1]) e o atual (pipe[i]).
      */
     int pipes[MAX_SEGMENTS - 1][2];
-    int i;
-    for (i = 0; i < nseg - 1; i++) {
-        if (pipe(pipes[i]) < 0) {
-            perror("pipe");
-            return;
-        }
-    }
 
-    /*
-     * 4. Lançar um processo filho por segmento.
-     *
-     * Cada filho:
-     *   a) Redireciona o seu stdin/stdout para o pipe correto (se aplicável)
-     *   b) Aplica redirecionamentos de ficheiros (>, <, 2>)
-     *   c) Chama execvp para se transformar no programa
-     *
-     * O pai guarda todos os PIDs dos filhos para esperar por eles no fim.
-     */
     pid_t pids[MAX_SEGMENTS];
 
+    int i;
     for (i = 0; i < nseg; i++) {
-        pids[i] = fork();
 
+        /*
+         * Criar pipe[i] agora, imediatamente antes do fork do segmento i.
+         * O último segmento não precisa de pipe de saída.
+         */
+        if (i < nseg - 1) {
+            if (pipe(pipes[i]) < 0) {
+                perror("pipe");
+                return;
+            }
+        }
+
+        pids[i] = fork();
         if (pids[i] < 0) {
             perror("fork");
             return;
@@ -187,55 +159,39 @@ void execute_command(const char *command) {
             /* ── estamos no FILHO i ── */
 
             /*
-             * a) Ligar o stdin ao pipe do segmento anterior (se não for o primeiro)
-             *
-             * Exemplo: segmento 1 (B em "A | B | C")
-             *   O stdin de B deve vir de pipes[0][0] (lado de leitura do pipe A→B)
-             *   dup2(pipes[0][0], 0) faz com que o fd 0 (stdin) passe a ser pipes[0][0]
-             *   Depois fechamos pipes[0][0] porque já não precisamos da cópia extra
+             * a) Ligar o stdin ao pipe do segmento anterior (se não for o primeiro).
+             * pipe[i-1][0] é o lado de leitura do pipe anterior.
+             * Depois de dup2, fechamos ambos os lados — o pai já fechou pipe[i-1][1]
+             * no ciclo anterior, mas o filho recebeu cópias dos fds ao nascer.
              */
             if (i > 0) {
-                dup2(pipes[i - 1][0], 0);   /* stdin ← pipe anterior (leitura) */
+                dup2(pipes[i - 1][0], 0);
                 close(pipes[i - 1][0]);
             }
 
             /*
-             * b) Ligar o stdout ao pipe do segmento seguinte (se não for o último)
-             *
-             * Exemplo: segmento 0 (A em "A | B | C")
-             *   O stdout de A deve ir para pipes[0][1] (lado de escrita do pipe A→B)
-             *   dup2(pipes[0][1], 1) faz com que o fd 1 (stdout) passe a ser pipes[0][1]
+             * b) Ligar o stdout ao pipe atual (se não for o último).
+             * pipe[i][1] é o lado de escrita do pipe que acabámos de criar.
+             * Depois de dup2, fechamos ambos os lados.
              */
             if (i < nseg - 1) {
-                dup2(pipes[i][1], 1);       /* stdout → pipe seguinte (escrita) */
+                dup2(pipes[i][1], 1);
+                close(pipes[i][0]);
                 close(pipes[i][1]);
             }
 
             /*
-             * c) Fechar TODOS os file descriptors dos pipes que este filho não usa.
-             *
-             * Isto é crucial — se não fecharmos, o filho seguinte nunca recebe EOF
-             * porque há sempre alguém com o lado de escrita aberto.
+             * Nota: já não precisamos do grande loop a fechar todos os pipes,
+             * porque em qualquer momento só estão abertos pipe[i-1] e pipe[i],
+             * e ambos foram tratados nos passos a) e b) acima.
              */
-            int j;
-            for (j = 0; j < nseg - 1; j++) {
-                close(pipes[j][0]);
-                close(pipes[j][1]);
-            }
 
-            /*
-             * d) Aplicar redirecionamentos de ficheiros (>, <, 2>)
-             *
-             * Exemplo: "echo hello > out.txt"
-             *   Abrimos out.txt para escrita e fazemos dup2(fd, 1)
-             *   A partir daqui o stdout deste filho vai para out.txt
-             *   Fechamos o fd extra porque o dup2 já criou uma cópia no fd 1
-             */
+            /* c) Aplicar redirecionamentos de ficheiros (>, <, 2>) */
             if (segs[i].file_out) {
                 int fd = open(segs[i].file_out,
                               O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 if (fd < 0) { perror("open >"); _exit(1); }
-                dup2(fd, 1);    /* stdout → ficheiro */
+                dup2(fd, 1);
                 close(fd);
             }
 
@@ -243,41 +199,48 @@ void execute_command(const char *command) {
                 int fd = open(segs[i].file_err,
                               O_WRONLY | O_CREAT | O_TRUNC, 0644);
                 if (fd < 0) { perror("open 2>"); _exit(1); }
-                dup2(fd, 2);    /* stderr → ficheiro */
+                dup2(fd, 2);
                 close(fd);
             }
 
             if (segs[i].file_in) {
                 int fd = open(segs[i].file_in, O_RDONLY);
                 if (fd < 0) { perror("open <"); _exit(1); }
-                dup2(fd, 0);    /* stdin ← ficheiro */
+                dup2(fd, 0);
                 close(fd);
             }
 
-            /* e) Transformar este processo no programa pedido */
+            /* d) Transformar este processo no programa pedido */
             execvp(segs[i].args[0], segs[i].args);
             perror("execvp");
             _exit(1);
         }
-        /* ── voltámos ao PAI — continuar para o próximo segmento ── */
+
+        /* ── voltámos ao PAI ── */
+
+        /*
+         * Fechar pipe[i-1] completamente — o filho i já o herdou e
+         * nenhum outro segmento vai precisar dele. Fazemos isto logo aqui,
+         * não no final, para nunca termos mais de dois pipes abertos ao mesmo tempo.
+         */
+        if (i > 0) {
+            close(pipes[i - 1][0]);
+        }
+
+        /*
+         * Fechar a ponta de escrita de pipe[i] no pai.
+         * O pai nunca escreve nos pipes — só os filhos é que o fazem.
+         * Se não fecharmos, o filho seguinte nunca recebe EOF.
+         */
+        if (i < nseg - 1) {
+            close(pipes[i][1]);
+        }
     }
 
     /*
-     * 5. O pai fecha TODOS os file descriptors dos pipes.
-     *
-     * O pai nunca lê nem escreve nos pipes — isso é trabalho dos filhos.
-     * Se o pai não fechar, os filhos nunca recebem EOF e ficam bloqueados.
-     */
-    for (i = 0; i < nseg - 1; i++) {
-        close(pipes[i][0]);
-        close(pipes[i][1]);
-    }
-
-    /*
-     * 6. Esperar que TODOS os filhos terminem antes de regressar.
-     *
-     * Usamos waitpid em loop para esperar por cada filho pela ordem em que
-     * foi lançado. Só quando todos terminarem é que o runner envia MSG_DONE.
+     * 5. Esperar que todos os filhos terminem.
+     * Nota: já não há loop a fechar pipes aqui — foram todos fechados
+     * incrementalmente dentro do ciclo de forks acima.
      */
     for (i = 0; i < nseg; i++) {
         int status;

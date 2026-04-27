@@ -17,7 +17,7 @@ RUNNER_SRCS = src/runner/main.c \
 CONTROLLER_OBJS = $(CONTROLLER_SRCS:src/%.c=obj/%.o)
 RUNNER_OBJS     = $(RUNNER_SRCS:src/%.c=obj/%.o)
 
-all: folders bin/controller bin/runner
+all: folders bin/controller bin/runner symlinks
 
 controller: bin/controller
 runner:     bin/runner
@@ -35,5 +35,15 @@ obj/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+symlinks:
+	@ln -sf bin/controller controller
+	@ln -sf bin/runner runner
+
 clean:
-	rm -rf obj/* tmp/* bin/*
+	rm -rf obj/* tmp/* bin/* controller runner
+	find . -maxdepth 1 -name "*.txt" ! -name "log.txt" -delete
+	@mkdir -p tmp
+
+clean-all: clean
+	rm -f log.txt
+
