@@ -24,6 +24,7 @@ typedef struct {
     MsgType type;
     pid_t runner_pid;
     int user_id;
+    int job_id;
     char command[MAX_CMD];
 } Message;
 

@@ -17,7 +17,7 @@ typedef struct {
     struct timeval submit_time;  // <- NOVO
 } RunningSlot;
 
-void send_go_ahead (pid_t runner_pid);
+void send_go_ahead (pid_t runner_pid, int job_id);
 void send_response (pid_t runner_pid, const char *text);
 void dispatch_next (Scheduler *s, RunningSlot *slot);
 void log_job       (int fd_log, RunningSlot *slot, struct timeval *end);

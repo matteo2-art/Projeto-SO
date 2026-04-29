@@ -11,7 +11,7 @@
 
 
 // Abre o FIFO privado do runner e envia MSG_GO_AHEAD
-void send_go_ahead(pid_t runner_pid) {
+void send_go_ahead(pid_t runner_pid, int job_id) {
     char    path[64];
     Message msg;
     int     fd;
@@ -20,6 +20,7 @@ void send_go_ahead(pid_t runner_pid) {
     msg.type       = MSG_GO_AHEAD;
     msg.runner_pid = runner_pid;
     msg.user_id    = 0;
+    msg.job_id     = job_id; 
     msg.command[0] = '\0';
     fd = open_fifo_write(path);
     if (fd < 0) return;
@@ -61,7 +62,7 @@ void dispatch_next(Scheduler *s, RunningSlot *slot) {
     gettimeofday(&slot->start_time, NULL);
     free(job);
 
-    send_go_ahead(slot->runner_pid);
+    send_go_ahead(slot->runner_pid, slot->job_id);
 }
 
 // Calcula a duração (end_time - slot->start_time) e escreve uma linha no log.txt. 

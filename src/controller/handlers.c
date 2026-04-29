@@ -8,12 +8,9 @@
 #include "controller/handlers.h"
 
 void handle_request(Message *msg, Scheduler *s, RunningSlot *slots, int parallel, int *next_job_id) {
-    int idx;
+    scheduler_add_job(s, msg->job_id, msg->user_id, msg->runner_pid, msg->command);
 
-    scheduler_add_job(s, *next_job_id, msg->user_id, msg->runner_pid, msg->command);
-    (*next_job_id)++;
-
-    idx = find_free_slot(slots, parallel);
+    int idx = find_free_slot(slots, parallel);
     if (idx >= 0)
         dispatch_next(s, &slots[idx]);
 }

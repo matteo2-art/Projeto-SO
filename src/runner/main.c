@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
         msg.type       = MSG_REQUEST;
         msg.runner_pid = my_pid;
         msg.user_id    = user_id;
+        msg.job_id     = cmd_id;
         strncpy(msg.command, command, MAX_CMD - 1);
         msg.command[MAX_CMD - 1] = '\0';
 
