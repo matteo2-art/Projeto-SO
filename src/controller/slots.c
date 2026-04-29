@@ -57,6 +57,7 @@ void dispatch_next(Scheduler *s, RunningSlot *slot) {
     slot->runner_pid = job->runner_pid;
     strncpy(slot->command, job->command, MAX_CMD - 1);
     slot->command[MAX_CMD - 1] = '\0';
+    slot->submit_time = job->submit_time;   // ← NOVO: copiar tempo de submissão
     gettimeofday(&slot->start_time, NULL);
     free(job);
 
@@ -64,17 +65,25 @@ void dispatch_next(Scheduler *s, RunningSlot *slot) {
 }
 
 // Calcula a duração (end_time - slot->start_time) e escreve uma linha no log.txt. 
+// Também regista arrival (submit_time) e first_run (start_time) para cálculo de response time.
 // Chamada quando um slot termina, antes de o limpar.
 void log_job(int fd_log, RunningSlot *slot, struct timeval *end) {
-    char line[MAX_CMD + 128];
-    long secs  = end->tv_sec  - slot->start_time.tv_sec;
-    long usecs = end->tv_usec - slot->start_time.tv_usec;
+    char line[MAX_CMD + 256];
+    // duração = end - submit_time  (turnaround real)
+    long secs  = end->tv_sec  - slot->submit_time.tv_sec;
+    long usecs = end->tv_usec - slot->submit_time.tv_usec;
     int  n;
 
     if (usecs < 0) { secs--; usecs += 1000000; }
+    
+    // arrival = submit_time em formato decimal (sec.microsec)
+    // first_run = start_time em formato decimal (sec.microsec)
     n = snprintf(line, sizeof(line),
-        "job=%d user=%d cmd=%s duration=%ld.%06lds\n",
-        slot->job_id, slot->user_id, slot->command, secs, usecs);
+        "job=%d user=%d cmd=%s arrival=%ld.%06ld first_run=%ld.%06ld duration=%ld.%06lds\n",
+        slot->job_id, slot->user_id, slot->command,
+        slot->submit_time.tv_sec, slot->submit_time.tv_usec,
+        slot->start_time.tv_sec, slot->start_time.tv_usec,
+        secs, usecs);
     write(fd_log, line, n);
 }
 

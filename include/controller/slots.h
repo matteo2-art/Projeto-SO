@@ -14,6 +14,7 @@ typedef struct {
     pid_t          runner_pid;
     char           command[MAX_CMD];
     struct timeval start_time;
+    struct timeval submit_time;  // <- NOVO
 } RunningSlot;
 
 void send_go_ahead (pid_t runner_pid);

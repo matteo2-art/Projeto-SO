@@ -18,6 +18,7 @@ Job *make_job(int job_id, int user_id, pid_t runner_pid, const char *command) {
     strncpy(job->command, command, MAX_CMD - 1);
     job->command[MAX_CMD - 1] = '\0';
     job->next = NULL;
+    gettimeofday(&job->submit_time, NULL);   // ← NOVO
     return job;
 }
 

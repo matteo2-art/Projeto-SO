@@ -16,7 +16,8 @@ typedef struct Job {
     int job_id;
     int user_id;
     pid_t runner_pid;
-    char command[MAX_CMD]; 
+    char command[MAX_CMD];
+    struct timeval submit_time;  // <- NOVO
     struct Job *next;
 } Job;
 
