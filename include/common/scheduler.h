@@ -2,6 +2,7 @@
 #define SCHEDULER_H
 
 #include <sys/types.h>   
+#include <sys/time.h>
 
 #define MAX_CMD 512
 
