@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "runner/parser.h"
+#include "runner/execute.h"
 #include "common/ipc.h"
 #include "common/protocol.h"
 

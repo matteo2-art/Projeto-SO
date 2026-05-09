@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include "common/fcfs.h"
 
-/* ── POLÍTICA FCFS (fila de espera) ──────────────────────────────────────── */
-
 void fcfs_add_job(Scheduler *s, int job_id, int user_id, pid_t runner_pid, const char *command) {
     Job *job = make_job(job_id, user_id, runner_pid, command);
     if (job == NULL) { perror("job"); return; }
@@ -21,18 +19,15 @@ void fcfs_add_job(Scheduler *s, int job_id, int user_id, pid_t runner_pid, const
 }
 
 Job *fcfs_next_job(Scheduler *s) {
-    if (s->fcfs.head == NULL) return NULL; // A fila está vazia
+    if (s->fcfs.head == NULL) return NULL; 
 
-    // Pegar na pessoa que está na frente da fila
     Job *job     = s->fcfs.head;
     
-    // Mover a frente da fila para a próxima pessoa
     s->fcfs.head = job->next;
     
-    // Se a fila estiver agora vazia, garantir que a tail não aponta para lixo
     if (s->fcfs.head == NULL) s->fcfs.tail = NULL;
 
-    job->next = NULL; // Desconectar a tarefa da fila
+    job->next = NULL; 
     s->size--;
     return job;
 }
@@ -49,7 +44,6 @@ void fcfs_list(Scheduler *s, char *buf, int buf_size) {
 }
 
 void fcfs_destroy(Scheduler *s) {
-    // Liberta (free) todas as tarefas na fila para evitar fugas de memória quando o controller se desligar
     Job *job = s->fcfs.head;
     while (job != NULL) {
         Job *tmp = job->next;

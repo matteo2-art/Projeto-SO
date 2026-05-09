@@ -24,26 +24,24 @@ static UserQueue *rr_find_user(Scheduler *s, int user_id) {
 
 // Adiciona um novo utilizador ao ciclo circular de turnos
 static void rr_insert_user(Scheduler *s, UserQueue *uq) {
-    // Se for o primeiro utilizador de sempre, aponta para si próprio (formando um círculo de 1)
     if (s->rr.head == NULL) {
         uq->next      = uq;
         s->rr.head    = uq;
         s->rr.current = uq;
         return;
     }
-
-    // Encontrar o utilizador que está atualmente em último no círculo
     UserQueue *last = s->rr.head;
     while (last->next != s->rr.head) last = last->next;
-
-    // Inserir o novo utilizador no final, e fazê-lo apontar de volta para a head para fechar o círculo
     last->next = uq;
     uq->next   = s->rr.head;
+    /* avançar current para o novo utilizador —
+     * garante que quem ainda não foi servido tem prioridade */
+    s->rr.current = uq;
 }
 
 // Remove um utilizador do círculo (geralmente porque não lhe restam mais tarefas)
 static void rr_remove_user(Scheduler *s, UserQueue *uq) {
-    // Se for o ÚNICO utilizador no círculo
+    // Se for o único utilizador no círculo
     if (uq->next == uq) {
         s->rr.head    = NULL;
         s->rr.current = NULL;
@@ -51,17 +49,17 @@ static void rr_remove_user(Scheduler *s, UserQueue *uq) {
         return;
     }
 
-    // Encontrar o utilizador imediatamente antes dele, para o podermos contornar
+    // Encontrar o utilizador imediatamente antes dele, para o poder contornar
     UserQueue *prev = uq;
     while (prev->next != uq) prev = prev->next;
 
-    // Se estamos a apagar o utilizador que está atualmente no seu turno, passa-se o testemunho primeiro
+    // Se apagar o utilizador que está atualmente no seu turno, passa-se o testemunho primeiro
     if (s->rr.current == uq) s->rr.current = uq->next;
     
-    // Se estamos a apagar a âncora (head), move-se a âncora para o próximo utilizador
-    if (s->rr.head    == uq) s->rr.head    = uq->next;
+    // Se estamos a apagar a head, move-se a para o próximo utilizador
+    if (s->rr.head == uq) s->rr.head = uq->next;
 
-    // Contornar o utilizador e apagá-lo
+    // Contornar o utilizador e apaga-o
     prev->next = uq->next;
     free(uq);
 }
@@ -94,18 +92,18 @@ void rr_add_job(Scheduler *s, int job_id, int user_id, pid_t runner_pid, const c
 Job *rr_next_job(Scheduler *s) {
     if (s->rr.current == NULL) return NULL; // Nenhum utilizador tem tarefas
 
-    // 1. Dar um turno: Pegar na tarefa que está na frente da fila do utilizador ATUAL
+    // 1. Pegar na tarefa que está na frente da fila do utilizador atual
     UserQueue *uq  = s->rr.current;
     Job       *job = uq->head;
 
-    // 2. Passar o testemunho: Mover o ponteiro 'current' para o PRÓXIMO utilizador no círculo
+    // 2. Mover o ponteiro 'current' para o próximo utilizador no círculo
     s->rr.current = uq->next;
 
-    // 3. Limpeza: Remover a tarefa da fila do utilizador
+    // 3.Remover a tarefa da fila do utilizador
     uq->head = job->next;
     if (uq->head == NULL) uq->tail = NULL;
     
-    // Se essa era a sua mesmíssima última tarefa, expulsar o utilizador do ciclo circular completamente
+    // Se essa era a sua última tarefa, retirar o utilizador do ciclo circular 
     if (uq->head == NULL) rr_remove_user(s, uq);
 
     job->next = NULL;
@@ -132,7 +130,7 @@ void rr_list(Scheduler *s, char *buf, int buf_size) {
 void rr_destroy(Scheduler *s) {
     if (s->rr.head == NULL) return;
 
-    // Quebrar o círculo para não entrarmos num loop infinito enquanto libertamos memória
+    // Quebrar o círculo para não entar num loop infinito enquanto liberta-se memória
     UserQueue *last = s->rr.head;
     while (last->next != s->rr.head) last = last->next;
     last->next = NULL;

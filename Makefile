@@ -14,6 +14,7 @@ CONTROLLER_SRCS := \
 RUNNER_SRCS := \
 	src/runner/main.c \
 	src/runner/parser.c \
+	src/runner/execute.c \
 	src/common/ipc.c
 
 CONTROLLER_OBJS := $(CONTROLLER_SRCS:src/%.c=obj/%.o)
