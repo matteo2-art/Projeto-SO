@@ -34,8 +34,7 @@ static void rr_insert_user(Scheduler *s, UserQueue *uq) {
     while (last->next != s->rr.head) last = last->next;
     last->next = uq;
     uq->next   = s->rr.head;
-    /* avançar current para o novo utilizador —
-     * garante que quem ainda não foi servido tem prioridade */
+     // avançar current para o novo utilizador e garantir que quem ainda não foi servido tem prioridade 
     s->rr.current = uq;
 }
 

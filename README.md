@@ -48,13 +48,13 @@ O controller deve ser iniciado em background, especificando o número de slots p
 
 ```bash
 # FCFS com 1 slot paralelo
-$ ./controller 1 fcfs &
+$ ./controller 1 fcfs 
 
 # Round Robin com 2 slots paralelos
-$ ./controller 2 rr &
+$ ./controller 2 rr 
 
 # FCFS com 10 slots paralelos
-$ ./controller 10 fcfs &
+$ ./controller 10 fcfs 
 ```
 
 **Parâmetros:**
