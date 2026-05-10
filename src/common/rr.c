@@ -4,8 +4,6 @@
 #include <string.h>
 #include "common/rr.h"
 
-/* ── POLÍTICA ROUND ROBIN (Lista circular de utilizadores, cada um com a sua fila) ──────────────────────────────────────── */
-
 // Procura na lista circular para ver se este utilizador já tem uma fila ativa
 static UserQueue *rr_find_user(Scheduler *s, int user_id) {
     if (s->rr.head == NULL) return NULL;
