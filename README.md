@@ -71,8 +71,8 @@ $ ./runner -e <user_id> <comando>
 
 **Exemplos:**
 ```bash
-$ ./runner -e 1 sleep 5
-$ ./runner -e 2 sleep 2
+$ ./runner -e 1 "sleep 5"
+$ ./runner -e 2 "sleep 2"
 $ ./runner -e 3 "echo Hello"
 $ ./runner -e 1 ls -la
 ```
